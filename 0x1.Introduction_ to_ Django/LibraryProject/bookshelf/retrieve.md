@@ -1,2 +1,2 @@
-books = Book.objects.get()
+books = Book.objects.get('1984')
 #displays all the books 
