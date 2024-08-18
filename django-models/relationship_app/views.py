@@ -1,10 +1,9 @@
 from django.shortcuts import render
 from .models import Book
 from django.views.generic.detail import DetailView
-from django.contrib.auth.decorators import user_passes_test, permission_required
+from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import render, redirect, get_object_or_404
-from .forms import BookForm
-
+from django.contrib.auth.decorators import permission_required
 def list_books(request):
     books = Book.objects.all()
     return render(request, 'relationship_app/list_books.html', {'books': books})
