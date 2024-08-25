@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Example Form</title>
+</head>
+<body>
+    <h1>Submit Form</h1>
+    <form method="post" action="{% url 'some_view' %}">
+        {% csrf_token %}
+        {{ form.as_p }}  
+        <input type="submit" value="Submit">
+    </form>
+</body>
+</html>
