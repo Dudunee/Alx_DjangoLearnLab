@@ -1,14 +1,11 @@
-from django.http import HttpResponse
+from django.shortcuts import render
 from django.contrib.auth.decorators import permission_required
-from django.shortcuts import get_object_or_404, render, redirect
-from .models import MyModel
+from .models import Book
 
-@permission_required('bookshelf.can_edit', raise_exception=True)
-def edit_view(request, pk):
-    instance = get_object_or_404(MyModel, pk=pk)
-    if request.method == 'POST':
-        ...
-    return render(request, 'edit_template.html', {'instance': instance})
+@permission_required('bookshelf.can_view', raise_exception=True)
+def book_list(request):
+    books = Book.objects.all()  
+    return render(request, 'bookshelf/book_list.html', {'books': books})
 
 def index(request):
     return HttpResponse("Welcome to my book store.")
