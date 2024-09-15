@@ -1,25 +1,13 @@
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
-from .models import Post
+from django.contrib.auth.models import User
+from .models import BlogPost
 
-User = get_user_model()
-
-class PostSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Post
-        fields = ['id', 'title', 'content', 'published_date', 'author']
-
-class UserRegistrationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['username', 'email', 'password']
-        extra_kwargs = {'password': {'write_only': True}}
-
-    def create(self, validated_data):
-        user = User.objects.create_user(**validated_data)
-        return user
-
-class UserProfileSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email']
+
+class BlogPostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BlogPost
+        fields = ['id', 'title', 'content', 'published_date', 'author']
