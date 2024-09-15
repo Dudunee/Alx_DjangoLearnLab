@@ -16,7 +16,7 @@ from pathlib import Path
 STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
+    BASE_DIR / "static",
 ]
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
