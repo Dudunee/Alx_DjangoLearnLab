@@ -1,38 +1,34 @@
-from django.urls import reverse
-from rest_framework import status
 from rest_framework.test import APITestCase
-from django.contrib.auth.models import User
+from rest_framework import status
+from django.contrib.auth import get_user_model
 from .models import Post
 
-class PostTests(APITestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(username='testuser', password='testpassword')
-        self.post = Post.objects.create(title='Test Post', content='This is a test post.', author=self.user)
+User = get_user_model()
 
-    def test_list_posts(self):
-        url = reverse('post-list')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+class PostTests(APITestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='testuser', email='testuser@example.com', password='password')
+        self.client.login(username='testuser', password='password')
 
     def test_create_post(self):
-        url = reverse('post-list')
-        data = {'title': 'New Post', 'content': 'Content of the new post'}
-        self.client.login(username='testuser', password='testpassword')
-        response = self.client.post(url, data, format='json')
+        response = self.client.post('/api/posts/', {'title': 'Test Post', 'content': 'Test Content'})
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Post.objects.count(), 1)
+
+    def test_get_posts(self):
+        response = self.client.get('/api/posts/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_update_post(self):
-        url = reverse('post-detail', args=[self.post.id])
-        data = {'title': 'Updated Post Title'}
-        self.client.login(username='testuser', password='testpassword')
-        response = self.client.patch(url, data, format='json')
+        post = Post.objects.create(title='Old Title', content='Old Content', author=self.user)
+        response = self.client.patch(f'/api/posts/{post.id}/', {'title': 'New Title'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.post.refresh_from_db()
-        self.assertEqual(self.post.title, 'Updated Post Title')
+        post.refresh_from_db()
+        self.assertEqual(post.title, 'New Title')
 
     def test_delete_post(self):
-        url = reverse('post-detail', args=[self.post.id])
-        self.client.login(username='testuser', password='testpassword')
-        response = self.client.delete(url)
+        post = Post.objects.create(title='Delete Me', content='Content', author=self.user)
+        response = self.client.delete(f'/api/posts/{post.id}/')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertFalse(Post.objects.filter(id=self.post.id).exists())
+        self.assertEqual(Post.objects.count(), 0)
