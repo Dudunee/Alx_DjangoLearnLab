@@ -1,107 +1,79 @@
-from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from django.contrib.auth.models import User
-from .serializers import UserSerializer, BlogPostSerializer, UserRegistrationSerializer, UserLoginSerializer
-from .models import BlogPost
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import login, authenticate, logout
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.urls import reverse_lazy
+from .forms import UserRegisterForm, UserUpdateForm, PostForm
+from .models import Post
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 
-class UserRegistrationView(APIView):
-    def post(self, request, format=None):
-        serializer = UserRegistrationSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+# User Registration View
+def register(request):
+    if request.method == 'POST':
+        form = UserRegisterForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            messages.success(request, 'Account created successfully!')
+            return redirect('profile')
+    else:
+        form = UserRegisterForm()
+    return render(request, 'blog/register.html', {'form': form})
 
-class UserLoginView(APIView):
-    def post(self, request, format=None):
-        serializer = UserLoginSerializer(data=request.data)
-        if serializer.is_valid():
-            username = serializer.validated_data['username']
-            password = serializer.validated_data['password']
-            user = authenticate(username=username, password=password)
-            if user is not None:
-                auth_login(request, user)
-                return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
-            return Response({'error': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+# User Profile View
+@login_required
+def profile(request):
+    if request.method == 'POST':
+        form = UserUpdateForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Your account has been updated!')
+            return redirect('profile')
+    else:
+        form = UserUpdateForm(instance=request.user)
+    return render(request, 'blog/profile.html', {'form': form})
 
-class UserLogoutView(APIView):
-    def post(self, request, format=None):
-        auth_logout(request)
-        return Response({'message': 'Logged out successfully'}, status=status.HTTP_200_OK)
+# Blog Post List View
+class PostListView(ListView):
+    model = Post
+    template_name = 'blog/home.html'
+    context_object_name = 'posts'
+    ordering = ['-date_posted']
 
-class UserProfileView(APIView):
-    permission_classes = [IsAuthenticated]
+# Blog Post Detail View
+class PostDetailView(DetailView):
+    model = Post
 
-    def get(self, request, format=None):
-        serializer = UserSerializer(request.user)
-        return Response(serializer.data)
+# Blog Post Create View
+class PostCreateView(LoginRequiredMixin, CreateView):
+    model = Post
+    form_class = PostForm
+    template_name = 'blog/post_form.html'
+    
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        return super().form_valid(form)
 
-    def post(self, request, format=None):
-        serializer = UserSerializer(request.user, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+# Blog Post Update View
+class PostUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = Post
+    form_class = PostForm
+    template_name = 'blog/post_form.html'
+    
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        return super().form_valid(form)
 
-class BlogPostListView(APIView):
-    def get(self, request, format=None):
-        posts = BlogPost.objects.all()
-        serializer = BlogPostSerializer(posts, many=True)
-        return Response(serializer.data)
+    def test_func(self):
+        post = self.get_object()
+        return self.request.user == post.author
 
-class BlogPostDetailView(APIView):
-    def get(self, request, pk, format=None):
-        try:
-            post = BlogPost.objects.get(pk=pk)
-        except BlogPost.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        
-        serializer = BlogPostSerializer(post)
-        return Response(serializer.data)
-
-class BlogPostCreateView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, format=None):
-        serializer = BlogPostSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(author=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-class BlogPostUpdateView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def put(self, request, pk, format=None):
-        try:
-            post = BlogPost.objects.get(pk=pk)
-        except BlogPost.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-        if post.author != request.user:
-            return Response(status=status.HTTP_403_FORBIDDEN)
-
-        serializer = BlogPostSerializer(post, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-class BlogPostDeleteView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def delete(self, request, pk, format=None):
-        try:
-            post = BlogPost.objects.get(pk=pk)
-        except BlogPost.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-        if post.author != request.user:
-            return Response(status=status.HTTP_403_FORBIDDEN)
-
-        post.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+# Blog Post Delete View
+class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    model = Post
+    success_url = reverse_lazy('home')
+    
+    def test_func(self):
+        post = self.get_object()
+        return self.request.user == post.author
