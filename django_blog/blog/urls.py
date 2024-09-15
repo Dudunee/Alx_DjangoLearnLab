@@ -5,10 +5,16 @@ from .views import (
     BlogPostDetailView, 
     BlogPostCreateView, 
     BlogPostUpdateView, 
-    BlogPostDeleteView
+    BlogPostDeleteView,
+    UserRegistrationView,
+    UserLoginView,
+    UserLogoutView
 )
 
 urlpatterns = [
+    path('register/', UserRegistrationView.as_view(), name='user-register'),
+    path('login/', UserLoginView.as_view(), name='user-login'),
+    path('logout/', UserLogoutView.as_view(), name='user-logout'),
     path('profile/', UserProfileView.as_view(), name='profile'),
     path('posts/', BlogPostListView.as_view(), name='post-list'),
     path('posts/<int:pk>/', BlogPostDetailView.as_view(), name='post-detail'),
