@@ -7,11 +7,16 @@ from django.contrib.auth import get_user_model
 from rest_framework.decorators import api_view
 from rest_framework.generics import GenericAPIView
 
-class UserRegistrationView(generics.CreateAPIView):
-    queryset = CustomUser.objects.all()
+class UserRegistrationView(generics.GenericAPIView):
     serializer_class = UserRegistrationSerializer
-    permission_classes = [permissions.AllowAny]  # Allow registration for anyone
+    queryset = CustomUser.objects.all()
 
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response({"message": "User created successfully."}) 
+    
 class UserLoginView(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
         response = super(UserLoginView, self).post(request, *args, **kwargs)
