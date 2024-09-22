@@ -5,6 +5,7 @@ from .models import CustomUser
 from .serializers import UserSerializer, UserRegistrationSerializer
 from django.contrib.auth import get_user_model
 from rest_framework.decorators import api_view
+from rest_framework.generics import GenericAPIView
 
 class UserRegistrationView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
